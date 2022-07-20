@@ -1,7 +1,6 @@
 package me.hypherionmc.moonconfig.core.file;
 
 import me.hypherionmc.moonconfig.core.Config;
-import com.electronwill.nightconfig.core.io.*;
 import me.hypherionmc.moonconfig.core.io.*;
 import me.hypherionmc.moonconfig.core.utils.ConfigWrapper;
 

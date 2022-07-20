@@ -3,7 +3,6 @@ package me.hypherionmc.moonconfig.toml;
 import me.hypherionmc.moonconfig.core.CommentedConfig;
 import me.hypherionmc.moonconfig.core.Config;
 import me.hypherionmc.moonconfig.core.ConfigFormat;
-import com.electronwill.nightconfig.core.io.*;
 import me.hypherionmc.moonconfig.core.io.*;
 
 import java.io.Reader;

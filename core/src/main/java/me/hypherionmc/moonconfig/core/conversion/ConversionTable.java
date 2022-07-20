@@ -1,6 +1,5 @@
 package me.hypherionmc.moonconfig.core.conversion;
 
-import com.electronwill.nightconfig.core.*;
 import me.hypherionmc.moonconfig.core.CommentedConfig;
 import me.hypherionmc.moonconfig.core.Config;
 import me.hypherionmc.moonconfig.core.ConfigFormat;

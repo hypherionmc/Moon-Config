@@ -7,7 +7,6 @@ import java.lang.annotation.Target;
 
 /**
  * @author HypherionSA
- * @date 20/07/2022
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.FIELD)

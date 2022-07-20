@@ -73,10 +73,6 @@ configure(subprojects.findAll {it.name != "examples"}) {
 			}
 		}
 	}
-
-	signing {
-		sign publishing.publications.mavenJava
-	}
 }
 
 configure(subprojects.findAll {!it.name.contains("core") && it.name != "examples"}) {

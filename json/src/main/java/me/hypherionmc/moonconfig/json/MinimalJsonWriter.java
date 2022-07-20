@@ -1,7 +1,6 @@
 package me.hypherionmc.moonconfig.json;
 
 import me.hypherionmc.moonconfig.core.UnmodifiableConfig;
-import com.electronwill.nightconfig.core.io.*;
 import me.hypherionmc.moonconfig.core.io.*;
 
 import java.io.Writer;
