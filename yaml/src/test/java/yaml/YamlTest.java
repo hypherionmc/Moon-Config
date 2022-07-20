@@ -1,11 +1,11 @@
 package yaml;
 
 import com.electronwill.nightconfig.core.BasicTestEnum;
-import com.electronwill.nightconfig.core.Config;
-import com.electronwill.nightconfig.core.UnmodifiableConfig;
-import com.electronwill.nightconfig.core.io.ParsingMode;
-import com.electronwill.nightconfig.core.io.WritingMode;
-import com.electronwill.nightconfig.yaml.YamlFormat;
+import me.hypherionmc.moonconfig.core.Config;
+import me.hypherionmc.moonconfig.core.UnmodifiableConfig;
+import me.hypherionmc.moonconfig.core.io.ParsingMode;
+import me.hypherionmc.moonconfig.core.io.WritingMode;
+import me.hypherionmc.moonconfig.yaml.YamlFormat;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -13,8 +13,8 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.List;
 
-import static com.electronwill.nightconfig.core.NullObject.NULL_OBJECT;
-import static com.electronwill.nightconfig.core.file.FileNotFoundAction.THROW_ERROR;
+import static me.hypherionmc.moonconfig.core.NullObject.NULL_OBJECT;
+import static me.hypherionmc.moonconfig.core.file.FileNotFoundAction.THROW_ERROR;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class YamlTest {

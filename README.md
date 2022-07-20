@@ -1,5 +1,14 @@
 ![Night Config](logo.png)
 
+### This is a fork of Night-Config, modified for my needs in my projects.
+
+List of changes:
+
+* Added support for @SpecComment (So you can apply comments to fields)
+* Removed all android support, as I don't need it/can't build it atm
+
+---
+
 [![Maven Central](https://img.shields.io/maven-central/v/com.electronwill.night-config/core.svg)](https://search.maven.org/#search%7Cga%7C1%7Cg%3A%22com.electronwill.night-config%22)
 [![Javadocs](http://javadoc.io/badge/com.electronwill.night-config/core.svg)](http://javadoc.io/doc/com.electronwill.night-config/core)
 [![Build Status](https://travis-ci.com/TheElectronWill/Night-Config.svg?branch=master)](https://travis-ci.com/TheElectronWill/Night-Config)
