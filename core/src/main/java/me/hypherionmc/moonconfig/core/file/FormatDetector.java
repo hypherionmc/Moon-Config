@@ -75,10 +75,10 @@ public final class FormatDetector {
 	// Automatic registration of the officialy supported formats
 	// Custom formats must be loaded by the user
 	static {
-		tryLoad("com.electronwill.nightconfig.toml.TomlFormat");
-		tryLoad("com.electronwill.nightconfig.hocon.HoconFormat");
-		tryLoad("com.electronwill.nightconfig.json.JsonFormat");
-		tryLoad("com.electronwill.nightconfig.yaml.YamlFormat");
+		tryLoad("me.hypherionmc.moonconfig.toml.TomlFormat");
+		tryLoad("me.hypherionmc.moonconfig.hocon.HoconFormat");
+		tryLoad("me.hypherionmc.moonconfig.json.JsonFormat");
+		tryLoad("me.hypherionmc.moonconfig.yaml.YamlFormat");
 	}
 
 	private static void tryLoad(String className) {
