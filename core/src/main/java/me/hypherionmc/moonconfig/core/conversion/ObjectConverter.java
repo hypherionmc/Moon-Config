@@ -1,6 +1,7 @@
 package me.hypherionmc.moonconfig.core.conversion;
 
 import me.hypherionmc.moonconfig.core.*;
+import me.hypherionmc.moonconfig.core.fields.RandomArrayList;
 
 import java.lang.reflect.*;
 import java.util.*;
@@ -256,7 +257,12 @@ public final class ObjectConverter {
 
 							// Simple list, no conversion needed
 							AnnotationUtils.checkField(field, value);
-							field.set(object, value);
+
+							if (RandomArrayList.class.isAssignableFrom(field.getType())) {
+								field.set(object, new RandomArrayList((Collection)value));
+							} else {
+								field.set(object, value);
+							}
 
 						} else {
 							// List of objects => the bottom elements need conversion
@@ -271,7 +277,11 @@ public final class ObjectConverter {
 								} else {
 									dst = (Collection<Object>)createInstance(fieldType);
 								}
-								field.set(object, dst);
+								if (value instanceof RandomArrayList) {
+									field.set(object, new RandomArrayList(dst));
+								} else {
+									field.set(object, dst);
+								}
 							}
 
 							// Converts the elements of the list
