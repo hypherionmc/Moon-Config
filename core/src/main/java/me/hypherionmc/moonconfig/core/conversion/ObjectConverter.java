@@ -302,7 +302,11 @@ public final class ObjectConverter {
                                 EnumGetMethod method = (specEnum == null) ? EnumGetMethod.NAME_IGNORECASE : specEnum.method();
                                 field.set(object, method.get(value, enumType));
                             } else {
-							    field.set(object, value);
+							    if (RandomArrayList.class.isAssignableFrom(field.getType()) && value instanceof String) {
+									field.set(object, RandomArrayList.of(value));
+								} else {
+									field.set(object, value);
+								}
                             }
 						}
 					}
