@@ -1,16 +1,13 @@
 package me.hypherionmc.moonconfig.core.fields;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Random;
+import java.util.*;
 
 /**
  * @author HypherionSA
  */
 public class RandomArrayList<E> extends ArrayList<E> {
 
-	private E lastValue;
+	private Optional<E> lastValue = Optional.empty();
 
 	public RandomArrayList(int initialCapacity) {
 		super(initialCapacity);
@@ -24,18 +21,21 @@ public class RandomArrayList<E> extends ArrayList<E> {
 		super(c);
 	}
 
-	public E getNextRandom() {
-		if (lastValue == null) {
-			lastValue = getRandomValue();
+	public Optional<E> getNextRandom() {
+		if (!lastValue.isPresent()) {
+			lastValue = Optional.ofNullable(getRandomValue());
 		}
 		if (new Random().nextInt(10) == 2) {
-			lastValue = getRandomValue();
+			lastValue = Optional.ofNullable(getRandomValue());
 		}
 		return lastValue;
 	}
 
 	private E getRandomValue() {
-		return this.get(new Random().nextInt(this.size()));
+		if (!this.isEmpty()) {
+			return this.get(new Random().nextInt(this.size()));
+		}
+		return null;
 	}
 
 	@SafeVarargs
