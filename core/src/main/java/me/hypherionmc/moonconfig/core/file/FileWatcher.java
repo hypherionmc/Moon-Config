@@ -6,6 +6,7 @@ import java.nio.file.*;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.Consumer;
@@ -80,9 +81,9 @@ public final class FileWatcher {
 		Path dir = file.getParent();
 		WatchedDir watchedDir = watchedDirs.computeIfAbsent(dir, k -> new WatchedDir(dir));
 		WatchKey watchKey = dir.register(watchedDir.watchService,
-										 StandardWatchEventKinds.ENTRY_MODIFY);
+			StandardWatchEventKinds.ENTRY_MODIFY);
 		watchedFiles.computeIfAbsent(file,
-									 k -> new WatchedFile(watchedDir, watchKey, changeHandler));
+			k -> new WatchedFile(watchedDir, watchKey, changeHandler));
 	}
 
 	/**
@@ -161,18 +162,25 @@ public final class FileWatcher {
 				dirsIter:
 				for (Iterator<WatchedDir> it = watchedDirs.values().iterator(); it.hasNext() && run; ) {
 					WatchedDir watchedDir = it.next();
-					WatchKey key = watchedDir.watchService.poll();
+
+					WatchKey key = null;
+					try {
+						key = watchedDir.watchService.poll(25, TimeUnit.MILLISECONDS);
+					} catch (InterruptedException ignored) {}
 					if (key == null) {
 						continue;
 					}
+
 					allNull = false;
 					for (WatchEvent<?> event : key.pollEvents()) {
 						if (!run) {
 							break dirsIter;
 						}
-						if (event.kind() != StandardWatchEventKinds.ENTRY_MODIFY || event.count() > 1) {
+						if (event.kind() != StandardWatchEventKinds.ENTRY_MODIFY) {
 							continue;
 						}
+
+						@SuppressWarnings("unchecked")
 						Path childPath = ((WatchEvent<Path>)event).context();
 						Path filePath = watchedDir.dir.resolve(childPath);
 						WatchedFile watchedFile = watchedFiles.get(filePath);
@@ -185,6 +193,10 @@ public final class FileWatcher {
 						}
 					}
 					key.reset();
+
+					try {
+						Thread.sleep(50);
+					} catch (InterruptedException ignored) {}
 				}
 				if (allNull) {
 					LockSupport.parkNanos(SLEEP_TIME_NANOS);
