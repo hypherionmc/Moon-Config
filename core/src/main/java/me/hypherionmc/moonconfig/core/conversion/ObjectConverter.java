@@ -268,20 +268,18 @@ public final class ObjectConverter {
 							// List of objects => the bottom elements need conversion
 
 							// Uses the current field value if there is one, or create a new list
-							Collection<Object> dst = (Collection<Object>)field.get(object);
-							if (dst == null) {
-								if (fieldType == ArrayList.class
-									|| fieldType.isInterface()
-									|| Modifier.isAbstract(fieldType.getModifiers())) {
-									dst = new ArrayList<>(src.size());// allocates the right size
-								} else {
-									dst = (Collection<Object>)createInstance(fieldType);
-								}
-								if (value instanceof RandomArrayList) {
-									field.set(object, new RandomArrayList(dst));
-								} else {
-									field.set(object, dst);
-								}
+							Collection<Object> dst;
+							if (fieldType == ArrayList.class
+								|| fieldType.isInterface()
+								|| Modifier.isAbstract(fieldType.getModifiers())) {
+								dst = new ArrayList<>(src.size());// allocates the right size
+							} else {
+								dst = (Collection<Object>)createInstance(fieldType);
+							}
+							if (value instanceof RandomArrayList) {
+								field.set(object, new RandomArrayList(dst));
+							} else {
+								field.set(object, dst);
 							}
 
 							// Converts the elements of the list
