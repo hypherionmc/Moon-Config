@@ -14,12 +14,13 @@ configure(subprojects.findAll {it.name != "examples"}) {
 		mavenCentral()
 	}
 
-	task javadocJar(type: Jar, dependsOn: javadoc) {
+	tasks.register('javadocJar', Jar) {
+		dependsOn javadoc
 		archiveClassifier = 'javadoc'
 		from javadoc.destinationDir
 	}
 
-	task sourcesJar(type: Jar) {
+	tasks.register('sourcesJar', Jar) {
 		archiveClassifier = 'sources'
 		from sourceSets.main.java.srcDirs
 	}
@@ -77,7 +78,7 @@ configure(subprojects.findAll {it.name != "examples"}) {
 }
 
 configure(subprojects.findAll {!it.name.contains("core") && it.name != "examples"}) {
-	task fatJar(type: Jar) {
+	tasks.register('fatJar', Jar) {
 		archiveBaseName = archivesBaseName + '-fat'
 		from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
 		with jar
@@ -92,8 +93,9 @@ configure(subprojects.findAll {it.name.contains("core")}) {
 	/* The purpose of this code is allow the other modules
 	   to use the core test classes for their tests. */
 
-	task testJar(type: Jar, dependsOn: testClasses) {
-		baseName = "test-${project.archivesBaseName}"
+	tasks.register('testJar', Jar) {
+		dependsOn testClasses
+		archiveBaseName = "test-${project.archivesBaseName}"
 		from sourceSets.test.output
 	}
 
