@@ -283,7 +283,7 @@ public final class ObjectConverter {
 							}
 
 							// Converts the elements of the list
-							convertConfigsToObject(src, dst, dstTypes, 0);
+							convertConfigsToObject(src, dst, dstTypes, 0, field);
 
 							// Applies the checks
 							AnnotationUtils.checkField(field, dst);
@@ -403,7 +403,8 @@ public final class ObjectConverter {
 	private void convertConfigsToObject(Collection<?> src,
 										Collection<Object> dst,
 										List<Class<?>> dstElementTypes,
-										int currentLevel) {
+										int currentLevel,
+										Field field) {
 		final Class<?> currentType = dstElementTypes.get(currentLevel);
 		for (Object elem : src) {
 			if (elem == null) {
@@ -420,7 +421,7 @@ public final class ObjectConverter {
 				} else {
 					subDst = (Collection<Object>)createInstance(currentType);
 				}
-				convertConfigsToObject(subSrc, subDst, dstElementTypes, currentLevel + 1);
+				convertConfigsToObject(subSrc, subDst, dstElementTypes, currentLevel + 1, field);
 				dst.add(subDst);
 			} else if (elem instanceof UnmodifiableConfig) {
 				Object elementObj = createInstance(currentType);
@@ -428,7 +429,8 @@ public final class ObjectConverter {
 				dst.add(elementObj);
 			} else {
 				String elemType = elem.getClass().toString();
-				throw new InvalidValueException("Unexpected element of type " + elemType + " in collection of objects");
+				String name = field.getName();
+				throw new InvalidValueException("Unexpected element of type " + elemType + " for field " + name);
 			}
 		}
 	}
