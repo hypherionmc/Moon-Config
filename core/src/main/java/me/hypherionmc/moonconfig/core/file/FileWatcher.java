@@ -6,6 +6,8 @@ import java.nio.file.*;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.LockSupport;
@@ -24,6 +26,7 @@ import java.util.function.Consumer;
 public final class FileWatcher {
 	private static final long SLEEP_TIME_NANOS = 1000;
 	private static volatile FileWatcher DEFAULT_INSTANCE;
+	private static final ExecutorService executor = Executors.newCachedThreadPool();
 
 	/**
 	 * Gets the default, global instance of FileWatcher.
@@ -31,16 +34,16 @@ public final class FileWatcher {
 	 * @return the default FileWatcher
 	 */
 	public static synchronized FileWatcher defaultInstance() {
-		if (DEFAULT_INSTANCE == null || !DEFAULT_INSTANCE.run) {// null or stopped FileWatcher
+		if (DEFAULT_INSTANCE == null || !DEFAULT_INSTANCE.run) { // null or stopped FileWatcher
 			DEFAULT_INSTANCE = new FileWatcher();
 		}
 		return DEFAULT_INSTANCE;
 	}
 
-	private final Map<Path, WatchedDir> watchedDirs = new ConcurrentHashMap<>();//dir -> watchService & infos
-	private final Map<Path, WatchedFile> watchedFiles = new ConcurrentHashMap<>();//file -> watchKey & handler
-	private final Thread thread = new WatcherThread();
+	private final Map<Path, WatchedDir> watchedDirs = new ConcurrentHashMap<>(); //dir -> watchService & infos
+	private final Map<Path, WatchedFile> watchedFiles = new ConcurrentHashMap<>(); //file -> watchKey & handler
 	private final Consumer<Exception> exceptionHandler;
+	private final WatchService watchService;
 	private volatile boolean run = true;
 
 	/**
@@ -57,7 +60,13 @@ public final class FileWatcher {
 	 */
 	public FileWatcher(Consumer<Exception> exceptionHandler) {
 		this.exceptionHandler = exceptionHandler;
-		thread.start();
+		try {
+			this.watchService = FileSystems.getDefault().newWatchService();
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+
+		executor.execute(new WatcherThread());
 	}
 
 	/**
@@ -79,11 +88,8 @@ public final class FileWatcher {
 	public void addWatch(Path file, Runnable changeHandler) throws IOException {
 		file = file.toAbsolutePath();// Ensures that the Path is absolute
 		Path dir = file.getParent();
-		WatchedDir watchedDir = watchedDirs.computeIfAbsent(dir, k -> new WatchedDir(dir));
-		WatchKey watchKey = dir.register(watchedDir.watchService,
-			StandardWatchEventKinds.ENTRY_MODIFY);
-		watchedFiles.computeIfAbsent(file,
-			k -> new WatchedFile(watchedDir, watchKey, changeHandler));
+		watchedDirs.computeIfAbsent(dir, k -> new WatchedDir(dir, watchService));
+		watchedFiles.computeIfAbsent(file, k -> new WatchedFile(changeHandler));
 	}
 
 	/**
@@ -129,17 +135,8 @@ public final class FileWatcher {
 	 * @param file the file to stop watching
 	 */
 	public void removeWatch(Path file) {
-		file = file.toAbsolutePath();// Ensures that the Path is absolute
-		Path dir = file.getParent();
-		WatchedDir watchedDir = watchedDirs.get(dir);
-		int remainingChildCount = watchedDir.watchedFileCount.decrementAndGet();
-		if (remainingChildCount == 0) {
-			watchedDirs.remove(dir);
-		}
-		WatchedFile watchedFile = watchedFiles.remove(file);
-		if (watchedFile != null) {
-			watchedFile.watchKey.cancel();
-		}
+		file = file.toAbsolutePath(); // Ensures that the Path is absolute
+		watchedFiles.remove(file);
 	}
 
 	/**
@@ -148,42 +145,38 @@ public final class FileWatcher {
 	 */
 	public void stop() throws IOException {
 		run = false;
+		executor.shutdown();
+		watchService.close();
+		watchedDirs.clear();
+		watchedFiles.clear();
 	}
 
 	private final class WatcherThread extends Thread {
 		{
 			setDaemon(true);
+			setName("Config-Watcher");
 		}
 
 		@Override
 		public void run() {
 			while (run) {
 				boolean allNull = true;
-				dirsIter:
-				for (Iterator<WatchedDir> it = watchedDirs.values().iterator(); it.hasNext() && run; ) {
-					WatchedDir watchedDir = it.next();
 
-					WatchKey key = null;
-					try {
-						key = watchedDir.watchService.poll(25, TimeUnit.MILLISECONDS);
-					} catch (InterruptedException ignored) {}
-					if (key == null) {
-						continue;
-					}
+				try {
+					WatchKey key = watchService.poll(25, TimeUnit.MILLISECONDS);
+					if (key == null) continue;
 
 					allNull = false;
+
 					for (WatchEvent<?> event : key.pollEvents()) {
-						if (!run) {
-							break dirsIter;
-						}
-						if (event.kind() != StandardWatchEventKinds.ENTRY_MODIFY) {
-							continue;
-						}
+						if (!run) return;
+						if (event.kind() != StandardWatchEventKinds.ENTRY_MODIFY && event.kind() != StandardWatchEventKinds.ENTRY_CREATE && event.kind() != StandardWatchEventKinds.ENTRY_DELETE) continue;
 
 						@SuppressWarnings("unchecked")
-						Path childPath = ((WatchEvent<Path>)event).context();
-						Path filePath = watchedDir.dir.resolve(childPath);
+						Path childPath = ((WatchEvent<Path>) event).context();
+						Path filePath = ((Path) key.watchable()).resolve(childPath);
 						WatchedFile watchedFile = watchedFiles.get(filePath);
+
 						if (watchedFile != null) {
 							try {
 								watchedFile.changeHandler.run();
@@ -193,26 +186,12 @@ public final class FileWatcher {
 						}
 					}
 					key.reset();
+					Thread.sleep(50);
+				} catch (InterruptedException ignored) {}
 
-					try {
-						Thread.sleep(50);
-					} catch (InterruptedException ignored) {}
-				}
-				if (allNull) {
+				if (allNull)
 					LockSupport.parkNanos(SLEEP_TIME_NANOS);
-				}
 			}
-			// Closes the WatchServices
-			for (WatchedDir watchedDir : watchedDirs.values()) {
-				try {
-					watchedDir.watchService.close();
-				} catch (IOException e) {
-					exceptionHandler.accept(e);
-				}
-			}
-			// Clears the maps
-			watchedDirs.clear();
-			watchedFiles.clear();
 		}
 	}
 
@@ -221,13 +200,11 @@ public final class FileWatcher {
 	 */
 	private static final class WatchedDir {
 		final Path dir;
-		final WatchService watchService;
-		final AtomicInteger watchedFileCount = new AtomicInteger();
 
-		private WatchedDir(Path dir) {
+		private WatchedDir(Path dir, WatchService watchService) {
 			this.dir = dir;
 			try {
-				this.watchService = dir.getFileSystem().newWatchService();
+				dir.register(watchService, StandardWatchEventKinds.ENTRY_MODIFY, StandardWatchEventKinds.ENTRY_CREATE, StandardWatchEventKinds.ENTRY_DELETE);
 			} catch (IOException e) {
 				throw new RuntimeException(e);
 			}
@@ -238,13 +215,10 @@ public final class FileWatcher {
 	 * Informations about a watched file, with an associated handler.
 	 */
 	private static final class WatchedFile {
-		final WatchKey watchKey;
 		volatile Runnable changeHandler;
 
-		private WatchedFile(WatchedDir watchedDir, WatchKey watchKey, Runnable changeHandler) {
-			this.watchKey = watchKey;
+		private WatchedFile(Runnable changeHandler) {
 			this.changeHandler = changeHandler;
-			watchedDir.watchedFileCount.getAndIncrement();
 		}
 	}
 }
