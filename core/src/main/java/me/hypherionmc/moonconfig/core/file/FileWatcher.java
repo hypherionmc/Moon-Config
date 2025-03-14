@@ -26,7 +26,7 @@ import java.util.function.Consumer;
 public final class FileWatcher {
 	private static final long SLEEP_TIME_NANOS = 1000;
 	private static volatile FileWatcher DEFAULT_INSTANCE;
-	private static final ExecutorService executor = Executors.newCachedThreadPool();
+	private final Thread thread = new WatcherThread();
 
 	/**
 	 * Gets the default, global instance of FileWatcher.
@@ -66,7 +66,7 @@ public final class FileWatcher {
 			throw new RuntimeException(e);
 		}
 
-		executor.execute(new WatcherThread());
+		thread.start();
 	}
 
 	/**
@@ -145,7 +145,7 @@ public final class FileWatcher {
 	 */
 	public void stop() throws IOException {
 		run = false;
-		executor.shutdown();
+		thread.interrupt();
 		watchService.close();
 		watchedDirs.clear();
 		watchedFiles.clear();
