@@ -6,7 +6,9 @@ import com.hypherionmc.moonconfig.core.annotations.Conversion;
 import com.hypherionmc.moonconfig.core.annotations.Path;
 import com.hypherionmc.moonconfig.core.annotations.PreserveNotNull;
 import com.hypherionmc.moonconfig.core.annotations.spec.*;
+import com.hypherionmc.moonconfig.core.annotations.validation.AutoFixer;
 import com.hypherionmc.moonconfig.core.utils.StringUtils;
+import com.hypherionmc.moonconfig.core.validation.correctors.ValueCorrector;
 
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Constructor;
@@ -164,6 +166,30 @@ final class AnnotationUtils {
 		if (specValidator != null) {
 			checkFieldSpec(field, value, specValidator);
 		}
+	}
+
+	public static Object fixField(String field, Object value, AutoFixer spec) {
+		final Predicate<Object> validatorInstance;
+		try {
+			Constructor<? extends Predicate<Object>> constructor = spec.test().getDeclaredConstructor();
+			constructor.setAccessible(true);
+			validatorInstance = constructor.newInstance();
+		} catch (ReflectiveOperationException ex) {
+			throw new ReflectionException("Cannot create a validator for field " + field, ex);
+		}
+
+		if (!validatorInstance.test(value)) {
+			try {
+				Constructor<? extends ValueCorrector<?>> constructor = spec.corrector().getDeclaredConstructor();
+				constructor.setAccessible(true);
+				ValueCorrector<?> corrector = constructor.newInstance();
+				value = corrector.correct(field, value, spec.defaultValue());
+			} catch (ReflectiveOperationException ex) {
+				throw new ReflectionException("Cannot create a validator for field " + field, ex);
+			}
+		}
+
+		return value;
 	}
 
 	private static void checkFieldSpec(Field field, Object value, SpecValidator spec) {

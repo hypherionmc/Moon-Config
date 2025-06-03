@@ -4,6 +4,7 @@ import com.hypherionmc.moonconfig.core.*;
 import com.hypherionmc.moonconfig.core.annotations.ForceBreakdown;
 import com.hypherionmc.moonconfig.core.annotations.spec.SpecComment;
 import com.hypherionmc.moonconfig.core.annotations.spec.SpecEnum;
+import com.hypherionmc.moonconfig.core.annotations.validation.AutoFixer;
 import com.hypherionmc.moonconfig.core.fields.RandomArrayList;
 
 import java.lang.reflect.*;
@@ -226,6 +227,11 @@ public final class ObjectConverter {
 				Converter<Object, Object> converter = AnnotationUtils.getConverter(field);
 				if (converter != null) {
 					value = converter.convertToField(value);
+				}
+
+				if (field.isAnnotationPresent(AutoFixer.class)) {
+					AutoFixer autoFixer = field.getAnnotation(AutoFixer.class);
+					value = AnnotationUtils.fixField(String.join(".", path), value, autoFixer);
 				}
 
 				// --- Writes the value to the object's field, converting it if needed ---
